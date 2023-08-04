@@ -7,4 +7,7 @@
     <string name="click_to_login">Click to login</string>
     <string name="click_to_register">Click to register</string>
     <string name="logout">Logout</string>
+    <string name="forgot_password">Forgot Password</string>
+    <string name="reset">Reset</string>
+    <string name="reset_password_hint">If the email exists in the system, an email will be sent</string>
 </resources>
