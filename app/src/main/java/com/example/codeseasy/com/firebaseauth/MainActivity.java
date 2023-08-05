@@ -13,6 +13,9 @@ import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.storage.StorageMetadata;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -89,28 +92,27 @@ public class MainActivity extends AppCompatActivity {
                 String uuid = user.getUid();
 
                 String filePath = uuid + "/" + timestamp + "/" + timestamp;
-
                 Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
                 byte[] bytes = baos.toByteArray();
-
                 String mimeType = getContentResolver().getType(uri);
 
                 // Create metadata
                 StorageMetadata metadata = new StorageMetadata.Builder()
                         .setContentType(mimeType)
                         .build();
-
                 FirebaseStorage storage = FirebaseStorage.getInstance();
                 StorageReference storageRef = storage.getReference().child(filePath);
                 UploadTask uploadTask = storageRef.putBytes(bytes, metadata);
                 uploadTask.addOnSuccessListener(taskSnapshot -> {
-
                     Toast.makeText(MainActivity.this, "Upload successful", Toast.LENGTH_LONG).show();
                     // Handle successful upload here
                 }).addOnFailureListener(e -> {
+                    Log.e("Error1", e.getMessage());
                     Toast.makeText(MainActivity.this, "Upload Failed -> " + e, Toast.LENGTH_LONG).show();
+                    e.printStackTrace();
+
                     // Handle failed upload here
                 });
             } catch (Exception e) {
@@ -118,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        if(requestCode == YOUR_REQUEST_CODE && resultCode == RESULT_OK && data != null && data.getData() != null) {
+        else if(requestCode == YOUR_REQUEST_CODE && resultCode == RESULT_OK && data != null && data.getData() != null) {
             try {
                 Uri uri = data.getData();
                 String timestamp = String.valueOf(Instant.now().getEpochSecond());
@@ -129,39 +131,27 @@ public class MainActivity extends AppCompatActivity {
 
                 // Create metadata
                 StorageMetadata metadata = new StorageMetadata.Builder()
-                        .setContentType(mimeType)
+                        .setContentType(mimeType).setCustomMetadata("t", timestamp)
                         .build();
-
                 FirebaseStorage storage = FirebaseStorage.getInstance();
                 StorageReference storageRef = storage.getReference().child(filePath);
                 UploadTask uploadTask = storageRef.putFile(uri, metadata);
+
                 uploadTask.addOnSuccessListener(taskSnapshot -> {
 
                     Toast.makeText(MainActivity.this, "Upload successful", Toast.LENGTH_LONG).show();
                     // Handle successful upload here
                 }).addOnFailureListener(e -> {
+                    Log.e("Error2", e.getMessage());
                     Toast.makeText(MainActivity.this, "Upload Failed -> " + e, Toast.LENGTH_LONG).show();
+                    e.printStackTrace();
+
                     // Handle failed upload here
                 });
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }
-        else if(requestCode == YOUR_REQUEST_CODE || requestCode == PICK_IMAGE_REQUEST){
-            Log.e("TAG", "onActivityResult: " + requestCode + " " + resultCode);
-            if(data != null) {
-                Log.e("TAG", "onActivityResult1: " + data);
-            }
-            else {
-                Log.e("TAG", "onActivityResult1: " + "null");
 
-            }
-            if(data.getData() != null) {
-               Log.e("TAG", "onActivityResult2: " + data.getData());
-            }
-            else {
-                Log.e("TAG", "onActivityResult2: " + "null");
-            }
         }
     }
 }
