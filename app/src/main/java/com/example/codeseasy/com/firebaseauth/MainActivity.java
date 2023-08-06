@@ -16,8 +16,10 @@ import android.widget.Button;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.storage.ListResult;
 import com.google.firebase.storage.StorageMetadata;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -38,7 +40,7 @@ import java.util.Map;
 public class MainActivity extends AppCompatActivity {
 
     FirebaseAuth auth;
-    Button button, btn_upload;
+    Button button, btn_upload, btn_delete;
     TextView textView;
     FirebaseUser user;
     private static final int MM_CODE = 2;
@@ -52,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
         textView = findViewById(R.id.user_details);
         user = auth.getCurrentUser();
 
+        btn_delete = findViewById(R.id.del);
         btn_upload = findViewById(R.id.upload);
 
         if (user == null) {
@@ -75,6 +78,18 @@ public class MainActivity extends AppCompatActivity {
             intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[] {"image/*", "video/*", "audio/*"});
             startActivityForResult(intent, MM_CODE);
         });
+
+        btn_delete.setOnClickListener(view -> {
+            String uuid = user.getUid();
+            FirebaseStorage storage = FirebaseStorage.getInstance();
+            storage.getReference(uuid+"/1691233273").listAll().addOnCompleteListener(task -> {
+                if(task.isSuccessful()) {
+                    for(StorageReference item : task.getResult().getItems()) {
+                        item.delete();
+                    }
+                }
+            });
+        });
     }
 
     @Override
@@ -88,12 +103,12 @@ public class MainActivity extends AppCompatActivity {
 
                 String filePath = uuid + "/" + timestamp + "/" + timestamp;
 
-                StorageMetadata metadata = new StorageMetadata.Builder()
-                        .setContentType(mimeType).setCustomMetadata("t", timestamp)
-                        .build();
+//                StorageMetadata metadata = new StorageMetadata.Builder()
+//                        .setContentType("mimeType").setCustomMetadata("t", timestamp)
+//                        .build();
                 FirebaseStorage storage = FirebaseStorage.getInstance();
                 StorageReference storageRef = storage.getReference().child(filePath);
-                UploadTask uploadTask = storageRef.putFile(uri, metadata);
+                UploadTask uploadTask = storageRef.putFile(uri);
 
                 uploadTask.addOnSuccessListener(taskSnapshot -> {
                     Toast.makeText(MainActivity.this, "Upload successful", Toast.LENGTH_LONG).show();
@@ -104,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
 
                         Map<String, Object> fileData = new HashMap<>();
                         fileData.put("timestamp", timestamp);
-                        fileData.put("mimeType", mimeType);
+                        fileData.put("mimeType", "mimeType");
 
                         myRef.child(uuid).child(timestamp).setValue(fileData).addOnCompleteListener(task -> {
                             String t = String.valueOf(Instant.now().getEpochSecond());
