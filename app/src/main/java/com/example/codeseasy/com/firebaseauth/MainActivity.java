@@ -16,6 +16,8 @@ import android.widget.Button;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.storage.StorageMetadata;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -30,6 +32,8 @@ import java.io.ByteArrayOutputStream;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -78,15 +82,12 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         if(requestCode == MM_CODE && resultCode == RESULT_OK && data != null && data.getData() != null) {
-            try {
                 Uri uri = data.getData();
                 String timestamp = String.valueOf(Instant.now().getEpochSecond());
                 String uuid = user.getUid();
 
                 String filePath = uuid + "/" + timestamp + "/" + timestamp;
-                String mimeType = getContentResolver().getType(uri);
 
-                // Create metadata
                 StorageMetadata metadata = new StorageMetadata.Builder()
                         .setContentType(mimeType).setCustomMetadata("t", timestamp)
                         .build();
@@ -95,20 +96,38 @@ public class MainActivity extends AppCompatActivity {
                 UploadTask uploadTask = storageRef.putFile(uri, metadata);
 
                 uploadTask.addOnSuccessListener(taskSnapshot -> {
-
                     Toast.makeText(MainActivity.this, "Upload successful", Toast.LENGTH_LONG).show();
-                    // Handle successful upload here
+
+                    storageRef.getDownloadUrl().addOnSuccessListener(downloadUri -> {
+                        FirebaseDatabase database = FirebaseDatabase.getInstance("https://booqr-3cb0a-default-rtdb.europe-west1.firebasedatabase.app");
+                        DatabaseReference myRef = database.getReference("files");
+
+                        Map<String, Object> fileData = new HashMap<>();
+                        fileData.put("timestamp", timestamp);
+                        fileData.put("mimeType", mimeType);
+
+                        myRef.child(uuid).child(timestamp).setValue(fileData).addOnCompleteListener(task -> {
+                            String t = String.valueOf(Instant.now().getEpochSecond());
+                            myRef.child(uuid).child(timestamp).child(t).setValue(fileData).addOnCompleteListener(task1 -> {
+                                if(task1.isSuccessful()) {
+                                    Toast.makeText(MainActivity.this, "Upload successful2!!!", Toast.LENGTH_LONG).show();
+                                } else {
+                                    Toast.makeText(MainActivity.this, "Upload failed", Toast.LENGTH_LONG).show();
+                                }
+                            });
+
+                            if(task.isSuccessful()) {
+                                Toast.makeText(MainActivity.this, "Upload successful1!!!", Toast.LENGTH_LONG).show();
+                            } else {
+                                Toast.makeText(MainActivity.this, "Upload failed", Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    });
                 }).addOnFailureListener(e -> {
                     Log.e("Error2", e.getMessage());
                     Toast.makeText(MainActivity.this, "Upload Failed -> " + e, Toast.LENGTH_LONG).show();
                     e.printStackTrace();
-
-                    // Handle failed upload here
                 });
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
         }
     }
 }
